@@ -5,63 +5,81 @@ Every time a new post is observed a notification will
 be sent out
 """
 
+from collections import namedtuple
+from datetime import datetime
+from time import sleep
+import html
+import traceback
+
 from piazza_api import Piazza
 from slacker import Slacker
-from time import sleep
 
-#Accessing Piazza and loading data
-piazza_id = "" #TODO this is the suffix of the piazza url
-piazza_email = "" #TODO your email
-piazza_password = "" #TODO your piazza piazza_password
+# Accessing Piazza and loading data
+piazza_id = "" # TODO this is the suffix of the piazza url
+piazza_email = "" # TODO your email
+piazza_password = "" # TODO your piazza piazza_password
 p = Piazza()
 p.user_login(email=piazza_email, password=piazza_password)
 network = p.network(piazza_id)
 
-#Accessing Slack and configuring the bot
-slack_token = "" #TODO Your slack API token goes here
-bot=Slacker(slack_token) #authorizing bot
-channel="" #TODO Name of the channel to post to
-bot_name = "" #TODO Name of your slackbot
+# Accessing Slack and configuring the bot
+slack_token = "" # TODO Your slack API token goes here
+bot=Slacker(slack_token) # authorizing bot
+channel = "" # TODO Name of the channel to post to
+bot_name = "" # TODO Name of your slackbot
 
-#URL for posts on the page
+update_interval = 60 # update interval, in seconds
+
+# URL for posts on the page
 POST_BASE_URL = "https://piazza.com/class/"+piazza_id+"?cid="
 
-def get_max_id(feed):
+Post = namedtuple("Post", ["nr", "subject", "content_snippet"])
+
+def get_last_id(feed):
     for post in feed:
         if "pin" not in post:
             return post["nr"]
-    return -1
+    else:
+        return -1
 
-def check_for_new_posts(LAST_ID,network=network,include_link=True):
+def get_latest_posts(feed, last_id):
+    latest_posts = []
+    for post in feed:
+        is_new_post = post["nr"] > last_id
+        if "pin" not in post and is_new_post:
+            latest_posts.append(Post(
+                nr=post["nr"],
+                subject=html.unescape(post["subject"]),
+                content_snippet=html.unescape(post["content_snipet"])
+            ))
+    return latest_posts
+
+def check_for_new_posts(last_id):
     while True:
         try:
-            UPDATED_LAST_ID = get_max_id(network.get_feed()['feed'])
-            if UPDATED_LAST_ID > LAST_ID:
-                attachment = None
+            feed = network.get_feed()["feed"]
+            latest_posts = get_latest_posts(feed, last_id)
+            new_last_id = get_last_id(feed)
+            for post in latest_posts:
                 message = None
-                if include_link is True:
-                    attachment = [
-                        {
-                            "fallback": "New post on Piazza!",
-                            "title": "New post on Piazza!",
-                            "title_link": POST_BASE_URL+str(UPDATED_LAST_ID),
-                            "text": "Follow the link to view this post",
-                            "color": "good"
-                        }
-                    ]
-                else:
-                    message="New post on Piazza!"
+                attachment = [
+                    {
+                        "fallback": post.subject,
+                        "title": post.subject,
+                        "title_link": POST_BASE_URL + str(post.nr),
+                        "text": post.content_snippet,
+                        "color": "good"
+                    }
+                ]
                 bot.chat.post_message(channel,message, \
-                as_user=bot_name,parse='full',attachments=attachment)
-                LAST_ID = UPDATED_LAST_ID
-            else:
-                pass
-            print("Slackbot is running...")
-            sleep(60)
+                    as_user=bot_name,parse="full",attachments=attachment)
+            last_id = new_last_id
+            sleep(update_interval)
         except:
-            print("Error when attempting to get Piazza feed, going to sleep...")
-            sleep(60)
+            traceback.print_exc()
+            print("Error when attempting to get Piazza feed, sleeping...")
+            sleep(update_interval)
 
-if __name__ == '__main__':
-    LAST_ID = get_max_id(network.get_feed()['feed'])
-    check_for_new_posts(LAST_ID)
+if __name__ == "__main__":
+    last_id = get_last_id(network.get_feed()["feed"])
+    check_for_new_posts(last_id)
