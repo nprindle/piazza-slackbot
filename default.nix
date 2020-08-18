@@ -1,10 +1,30 @@
-{ pkgs, std }:
+let
+  pkgs =
+    let
+      fetchArchive = { owner, repo, rev, sha256 }: builtins.fetchTarball {
+        url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
+        inherit sha256;
+      };
+    in import (fetchArchive {
+      owner = "NixOS";
+      repo = "nixpkgs";
+      rev = "feb9c28902eca0384484004e0b7dfe5ac8661d6c";
+      sha256 = "03fk6s0crmqjgqsdpf6m2h0s4bgfs8kjf2kp0ifr08pc10kfk9m0";
+    }) {};
+
+  std = import (pkgs.fetchFromGitHub {
+    owner = "chessai";
+    repo = "nix-std";
+    rev = "1ea7e46efbd0ce738b27b3e450ebcb1d3571038e";
+    sha256 = "1mipd0wjfv65gn637dnj7vzaxkap93im6rhrqy0zr4kxn2ihfkp5";
+  });
+in
 
 args@{ piazza_id, piazza_email, piazza_password, slack_token, channel, bot_name }:
 
 let
   python = pkgs.python37;
-  python-env = with pkgs; python.withPackages (p: with p; [
+  python-env = python.withPackages (p: with p; [
     (python.pkgs.buildPythonPackage rec {
       pname = "piazza-api";
       version = "0.11.0";
