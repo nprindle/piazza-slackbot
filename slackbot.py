@@ -35,9 +35,12 @@ POST_BASE_URL = "https://piazza.com/class/"+piazza_id+"?cid="
 
 Post = namedtuple("Post", ["nr", "subject", "content_snippet"])
 
+def should_ignore_post(post):
+    return "pin" in post or "live" in post
+
 def get_last_id(feed):
     for post in feed:
-        if "pin" not in post:
+        if not should_ignore_post(post):
             return post["nr"]
     else:
         return -1
@@ -46,7 +49,7 @@ def get_latest_posts(feed, last_id):
     latest_posts = []
     for post in feed:
         is_new_post = post["nr"] > last_id
-        if "pin" not in post and is_new_post:
+        if is_new_post and not should_ignore_post(post):
             latest_posts.append(Post(
                 nr=post["nr"],
                 subject=html.unescape(post["subject"]),
