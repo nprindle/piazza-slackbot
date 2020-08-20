@@ -56,9 +56,9 @@ in pkgs.stdenv.mkDerivation {
     cp "$src"/slackbot.py "$out/bin/.piazza-slackbot-wrapped"
 
     sed -e ' ${
-      std.string.intercalate ";" (std.list.for (std.set.toList args) (kv:
+      std.string.concatMapSep ";" (kv:
         ''s/^${kv._0}[[:space:]]*=[[:space:]]*""/${kv._0} = "${kv._1}"/''
-      ))
+      ) (std.set.toList args)
     } ' -i "$out/bin/.piazza-slackbot-wrapped"
   '';
   installPhase = ''
