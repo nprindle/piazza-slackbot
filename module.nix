@@ -1,7 +1,7 @@
 { pkgs, lib, config, ... }:
 
 let
-  piazza-slackbot = import ./default.nix {
+  piazza-slackbot = import ./default.nix { inherit pkgs; } {
     inherit (cfg)
       piazza_id piazza_email piazza_password slack_token channel bot_name;
   };

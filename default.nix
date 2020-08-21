@@ -1,5 +1,5 @@
 let
-  pkgs =
+  pinned-pkgs =
     let
       fetchArchive = { owner, repo, rev, sha256 }: builtins.fetchTarball {
         url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
@@ -19,6 +19,9 @@ let
     sha256 = "1mipd0wjfv65gn637dnj7vzaxkap93im6rhrqy0zr4kxn2ihfkp5";
   });
 in
+
+{ pkgs ? pinned-pkgs
+}:
 
 args@{ piazza_id, piazza_email, piazza_password, slack_token, channel, bot_name }:
 
