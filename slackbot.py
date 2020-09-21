@@ -55,7 +55,7 @@ def get_latest_posts(feed, last_id):
                 subject=html.unescape(post["subject"]),
                 content_snippet=html.unescape(post["content_snipet"])
             ))
-    return latest_posts
+    return list(reversed(latest_posts))
 
 def check_for_new_posts(last_id):
     while True:
